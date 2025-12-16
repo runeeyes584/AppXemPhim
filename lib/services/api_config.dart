@@ -7,12 +7,16 @@ class ApiConfig {
 
   // API Endpoints
   static const String authEndpoint = '/api/auth';
+  static const String userEndpoint = '/api/user';
 
   // Auth endpoints
   static String get registerUrl => '$baseUrl$authEndpoint/register';
   static String get loginUrl => '$baseUrl$authEndpoint/login';
   static String get verifyEmailUrl => '$baseUrl$authEndpoint/verify-email';
   static String get googleLoginUrl => '$baseUrl$authEndpoint/google-login';
+
+  // User endpoints
+  static String updateUserUrl(String userId) => '$baseUrl$userEndpoint/$userId';
 
   // Request timeout
   static const Duration timeout = Duration(seconds: 30);

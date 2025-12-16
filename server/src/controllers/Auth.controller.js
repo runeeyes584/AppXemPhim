@@ -106,7 +106,9 @@ export const Login = async (req, res, next) => {
             auth: {
                 id: auth._id,
                 name: auth.name,
-                email: auth.email
+                email: auth.email,
+                avatar: auth.avatar,
+                provider: auth.provider
             }
         })
     } catch (error) {

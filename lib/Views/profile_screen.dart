@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,6 +8,7 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../theme_provider.dart';
 import 'bookmark_screen.dart';
+import 'edit_profile_screen.dart';
 import 'login_screen.dart';
 import 'search_screen.dart';
 
@@ -65,11 +68,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _logout() async {
     await _authService.logout();
     if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã đăng xuất thành công!'),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 2),
+        ),
+      );
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (route) => false,
       );
+    }
+  }
+
+  ImageProvider? _getAvatarImage() {
+    if (_user?.avatar == null || _user!.avatar!.isEmpty) {
+      return null;
+    }
+
+    final avatar = _user!.avatar!;
+    if (avatar.startsWith('data:image')) {
+      // Base64 image
+      try {
+        final base64Data = avatar.split(',').last;
+        return MemoryImage(base64Decode(base64Data));
+      } catch (e) {
+        return null;
+      }
+    } else {
+      // URL image
+      return NetworkImage(avatar);
     }
   }
 
@@ -105,10 +135,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   CircleAvatar(
                     radius: 60,
                     backgroundColor: const Color(0xFF5BA3F5),
-                    backgroundImage: _user?.avatar != null
-                        ? NetworkImage(_user!.avatar!)
-                        : null,
-                    child: _user?.avatar == null
+                    backgroundImage: _getAvatarImage(),
+                    child: _user?.avatar == null || _user!.avatar!.isEmpty
                         ? const Icon(
                             Icons.person,
                             size: 60,
@@ -143,7 +171,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildProfileOption(
                     icon: Icons.person_outline,
                     title: 'Chỉnh sửa hồ sơ',
-                    onTap: () {},
+                    onTap: () {
+                      if (_user != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditProfileScreen(
+                              user: _user!,
+                              onProfileUpdated: _loadUser,
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   ),
                   _buildProfileOption(
                     icon: Icons.notifications_outlined,

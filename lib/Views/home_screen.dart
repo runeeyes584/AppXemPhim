@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../Components/bottom_navbar.dart';
@@ -34,6 +36,26 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _user = user;
     });
+  }
+
+  ImageProvider? _getAvatarImage() {
+    if (_user?.avatar == null || _user!.avatar!.isEmpty) {
+      return null;
+    }
+
+    final avatar = _user!.avatar!;
+    if (avatar.startsWith('data:image')) {
+      // Base64 image
+      try {
+        final base64Data = avatar.split(',').last;
+        return MemoryImage(base64Decode(base64Data));
+      } catch (e) {
+        return null;
+      }
+    } else {
+      // URL image
+      return NetworkImage(avatar);
+    }
   }
 
   final List<Map<String, String>> _featuredMovies = [
@@ -191,10 +213,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: CircleAvatar(
                       radius: 18,
                       backgroundColor: const Color(0xFF5BA3F5),
-                      backgroundImage: _user?.avatar != null
-                          ? NetworkImage(_user!.avatar!)
-                          : null,
-                      child: _user?.avatar == null
+                      backgroundImage: _getAvatarImage(),
+                      child: _user?.avatar == null || _user!.avatar!.isEmpty
                           ? const Icon(
                               Icons.person,
                               size: 18,

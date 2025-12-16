@@ -128,6 +128,56 @@ class AuthService {
     }
   }
 
+  /// Update user profile (name, avatar, password)
+  /// Returns AuthResponse with updated user data on success
+  Future<AuthResponse> updateProfile({
+    required String userId,
+    String? name,
+    String? avatar,
+    String? password,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return AuthResponse.error('Chưa đăng nhập');
+      }
+
+      final body = <String, dynamic>{};
+      if (name != null && name.isNotEmpty) body['name'] = name;
+      if (avatar != null && avatar.isNotEmpty) body['avatar'] = avatar;
+      if (password != null && password.isNotEmpty) body['password'] = password;
+
+      final url = ApiConfig.updateUserUrl(userId);
+
+      final response = await http
+          .put(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(ApiConfig.timeout);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        // Update local storage with new user data
+        if (data['user'] != null) {
+          final updatedUser = User.fromJson(data['user']);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(ApiConfig.userKey, updatedUser.toJsonString());
+        }
+        return AuthResponse.fromJson(data);
+      } else {
+        return AuthResponse.error(data['message'] ?? 'Cập nhật thất bại');
+      }
+    } catch (e) {
+      return AuthResponse.error('Lỗi kết nối: ${e.toString()}');
+    }
+  }
+
   /// Save authentication data to local storage
   Future<void> _saveAuthData(String token, User? user) async {
     final prefs = await SharedPreferences.getInstance();
