@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import mongoose from 'mongoose';
 import AuthRoute from './routes/Auth.route.js';
+import UserRoute from './routes/User.route.js';
 dotenv.config();
 
 const app = express();
@@ -32,6 +33,7 @@ connectDB();
 
 // Routes
 app.use('/api/auth', AuthRoute);
+app.use('/api/user', UserRoute);
 
 app.use((req, res) => {
   res.status(404).json({
