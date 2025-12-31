@@ -5,6 +5,9 @@ import mongoose from 'mongoose';
 import AuthRoute from './routes/Auth.route.js';
 import UserRoute from './routes/User.route.js';
 import CommentRoute from './routes/Comment.route.js';
+import CategoryRoute from './routes/Category.routes.js';
+import CountryRoute from './routes/Country.routes.js';
+import MovieRoute from './routes/Movie.routes.js';
 dotenv.config();
 
 const app = express();
@@ -36,6 +39,9 @@ connectDB();
 app.use('/api/auth', AuthRoute);
 app.use('/api/user', UserRoute);
 app.use('/api/comments', CommentRoute);
+app.use('/api/categories', CategoryRoute);
+app.use('/api/countries', CountryRoute);
+app.use('/api/movies', MovieRoute);
 
 app.use((req, res) => {
   res.status(404).json({
