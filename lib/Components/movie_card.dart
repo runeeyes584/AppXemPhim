@@ -31,7 +31,6 @@ class MovieCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Movie Poster
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Image.network(
@@ -52,7 +51,6 @@ class MovieCard extends StatelessWidget {
               ),
             ),
             
-            // Bookmark Icon
             Positioned(
               top: 8,
               right: 8,
@@ -73,7 +71,6 @@ class MovieCard extends StatelessWidget {
               ),
             ),
             
-            // Movie Info at Bottom
             Positioned(
               bottom: 0,
               left: 0,

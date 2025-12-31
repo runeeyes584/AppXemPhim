@@ -70,7 +70,7 @@ class _MovieSlideState extends State<MovieSlide> {
             },
             itemCount: widget.movies.length,
             itemBuilder: (context, index) {
-              // Scale effect for center item
+              // Hiệu ứng phóng to cho item ở giữa
               double scale = 1.0;
               if (_pageController.hasClients && _pageController.position.haveDimensions) {
                 double page = _pageController.page ?? 0;
@@ -109,7 +109,6 @@ class _MovieSlideState extends State<MovieSlide> {
                       ),
                       child: Stack(
                         children: [
-                          // Movie Poster with Border
                           Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(24),
@@ -150,7 +149,6 @@ class _MovieSlideState extends State<MovieSlide> {
                             ),
                           ),
 
-                          // Gradient Overlay
                           Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(24),
@@ -167,7 +165,6 @@ class _MovieSlideState extends State<MovieSlide> {
                             ),
                           ),
 
-                          // Bookmark Button
                           Positioned(
                             top: 20,
                             right: 20,
@@ -203,7 +200,6 @@ class _MovieSlideState extends State<MovieSlide> {
                             ),
                           ),
 
-                          // Movie Info
                           Positioned(
                             bottom: 24,
                             left: 24,
@@ -268,7 +264,6 @@ class _MovieSlideState extends State<MovieSlide> {
 
         const SizedBox(height: 20),
 
-        // Page Indicator
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
@@ -302,7 +297,6 @@ class _MovieSlideState extends State<MovieSlide> {
 
         const SizedBox(height: 24),
 
-        // Action Buttons
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
