@@ -9,6 +9,7 @@ class SearchResultsGrid extends StatelessWidget {
   final Function(Movie)? onBookmark;
   final bool Function(Movie)? isBookmarked;
   final String emptyMessage;
+  final ScrollController? scrollController;
 
   const SearchResultsGrid({
     super.key,
@@ -18,6 +19,7 @@ class SearchResultsGrid extends StatelessWidget {
     this.onBookmark,
     this.isBookmarked,
     this.emptyMessage = 'Không tìm thấy phim nào',
+    this.scrollController,
   });
 
   @override
@@ -43,6 +45,7 @@ class SearchResultsGrid extends StatelessWidget {
     }
 
     return GridView.builder(
+      controller: scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,

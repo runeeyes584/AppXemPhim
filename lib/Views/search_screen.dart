@@ -23,79 +23,191 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   final MovieService _movieService = MovieService();
+  final ScrollController _scrollController = ScrollController();
 
   int _currentIndex = 1;
+
+  // Data State
+  List<Movie> _movies = [];
   bool _isLoading = false;
-  List<Movie> _searchResults = [];
+  bool _isLoadingMore = false;
   String _searchQuery = '';
+
+  // Pagination State
+  int _currentPage = 1;
+  bool _hasMore = true;
+  static const int _limit = 20;
+
   Timer? _debounce;
 
-  // Categories for filter
-  final List<String> _categories = [
-    'Tất cả',
-    'Hành động',
-    'Tình cảm',
-    'Kinh dị',
-    'Hoạt hình',
-    'Viễn tưởng',
-  ];
+  // Categories
+  final Map<String, String> _categorySlugs = {
+    'Tất cả': '',
+    'Hành động': 'hanh-dong',
+    'Tình cảm': 'tinh-cam',
+    'Kinh dị': 'kinh-di',
+    'Hoạt hình': 'hoat-hinh',
+    'Viễn tưởng': 'vien-tuong',
+  };
+
+  late List<String> _categories;
   String _selectedCategory = 'Tất cả';
 
   @override
   void initState() {
     super.initState();
+    _categories = _categorySlugs.keys.toList();
+
     savedMovieNotifier.addListener(_onSavedMoviesChanged);
     if (!savedMovieNotifier.isLoaded) {
       savedMovieNotifier.loadSavedMovies();
     }
+
+    _scrollController.addListener(_onScroll);
+
+    // Load initial data (Browse Mode)
+    _loadMovies();
   }
 
   @override
   void dispose() {
     savedMovieNotifier.removeListener(_onSavedMoviesChanged);
+    _scrollController.dispose();
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
   }
 
   void _onSavedMoviesChanged() {
-    if (mounted) {
-      setState(() {});
+    if (mounted) setState(() {});
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoading && !_isLoadingMore && _hasMore) {
+        _loadMoreMovies();
+      }
+    }
+  }
+
+  Future<void> _loadMovies() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      List<Movie> newMovies;
+
+      // If searching
+      if (_searchQuery.isNotEmpty) {
+        newMovies = await _movieService.searchMovies(
+          _searchQuery,
+          page: 1,
+          limit: _limit,
+        );
+      } else {
+        // Browse Mode
+        if (_selectedCategory == 'Tất cả') {
+          // Empty query returns all movies (Browse Mode)
+          newMovies = await _movieService.searchMovies(
+            '',
+            page: 1,
+            limit: _limit,
+          );
+        } else {
+          // Filter by category
+          final slug = _categorySlugs[_selectedCategory]!;
+          newMovies = await _movieService.getMoviesByCategory(
+            slug,
+            page: 1,
+            limit: _limit,
+          );
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _movies = newMovies;
+          _currentPage = 1;
+          _hasMore = newMovies.length >= _limit;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading movies: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadMoreMovies() async {
+    if (_isLoadingMore) return;
+    setState(() => _isLoadingMore = true);
+
+    try {
+      List<Movie> newMovies;
+      final nextPage = _currentPage + 1;
+
+      if (_searchQuery.isNotEmpty) {
+        newMovies = await _movieService.searchMovies(
+          _searchQuery,
+          page: nextPage,
+          limit: _limit,
+        );
+      } else {
+        if (_selectedCategory == 'Tất cả') {
+          newMovies = await _movieService.searchMovies(
+            '',
+            page: nextPage,
+            limit: _limit,
+          );
+        } else {
+          final slug = _categorySlugs[_selectedCategory]!;
+          newMovies = await _movieService.getMoviesByCategory(
+            slug,
+            page: nextPage,
+            limit: _limit,
+          );
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _movies.addAll(newMovies);
+          _currentPage = nextPage;
+          _hasMore = newMovies.length >= _limit;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading more movies: $e');
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
+    // Update query instantly for UI input
     setState(() {
       _searchQuery = query;
     });
 
-    if (query.isEmpty) {
-      setState(() {
-        _searchResults = [];
-        _isLoading = false;
-      });
-      return;
-    }
-
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      _performSearch(query);
+      // Reset and reload
+      _loadMovies();
     });
   }
 
-  Future<void> _performSearch(String query) async {
-    setState(() => _isLoading = true);
+  void _onCategorySelected(String category) {
+    if (_selectedCategory == category) return;
 
-    // Call API
-    final results = await _movieService.searchMovies(query);
+    setState(() {
+      _selectedCategory = category;
+      _searchController.clear();
+      _searchQuery = ''; // Reset search when changing category
+    });
 
-    if (mounted) {
-      setState(() {
-        _searchResults = results;
-        _isLoading = false;
-      });
-    }
+    _loadMovies();
   }
 
   Future<void> _toggleSaveMovie(Movie movie) async {
@@ -171,7 +283,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       controller: _searchController,
                       onChanged: _onSearchChanged,
                       onFilterTap: () {
-                        // Show filter bottom sheet or dialog
+                        // Optional: Show filter dialog
                       },
                     ),
                   ),
@@ -183,105 +295,52 @@ class _SearchScreenState extends State<SearchScreen> {
             CategoryFilterList(
               categories: _categories,
               selectedCategory: _selectedCategory,
-              onCategorySelected: (category) {
-                setState(() => _selectedCategory = category);
-                // TODO: Implement category filtering logic combining with search
-              },
+              onCategorySelected: _onCategorySelected,
             ),
 
             const SizedBox(height: 16),
 
-            // Search Results or Placeholder
+            // Results
             Expanded(
-              child: _searchQuery.isEmpty
-                  ? _buildEmptyState(
-                      isDark,
-                    ) // Show suggestions/history when empty
-                  : SearchResultsGrid(
-                      movies: _searchResults,
-                      isLoading: _isLoading,
-                      isBookmarked: (movie) =>
-                          savedMovieNotifier.isMovieSaved(movie.slug),
-                      onBookmark: _toggleSaveMovie,
-                      onMovieTap: (movie) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MovieDetailScreen(
-                              movieId: movie.slug, // Pass slug as ID
-                              movie: movie,
-                            ),
-                          ),
-                        );
-                      },
+              child: SearchResultsGrid(
+                scrollController: _scrollController,
+                movies: _movies,
+                isLoading:
+                    _isLoading &&
+                    _movies.isEmpty, // Only show center loading if initial load
+                emptyMessage: _searchQuery.isEmpty
+                    ? 'Không có phim nào'
+                    : 'Không tìm thấy kết quả cho "$_searchQuery"',
+                isBookmarked: (movie) =>
+                    savedMovieNotifier.isMovieSaved(movie.slug),
+                onBookmark: _toggleSaveMovie,
+                onMovieTap: (movie) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          MovieDetailScreen(movieId: movie.slug, movie: movie),
                     ),
+                  );
+                },
+              ),
             ),
+
+            // Bottom Loading Indicator for Infinite Scroll
+            if (_isLoadingMore)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
           ],
         ),
       ),
       bottomNavigationBar: BottomNavbar(
         currentIndex: _currentIndex,
         onTap: _onNavBarTap,
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(bool isDark) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Search Suggestions Section with hardcoded data for now
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Gợi ý tìm kiếm',
-              style: TextStyle(
-                color: isDark ? Colors.white : Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildSuggestionChip('🔥 Top Gun: Maverick', isDark),
-                _buildSuggestionChip('Avatar 2', isDark),
-                _buildSuggestionChip('Spider-Man', isDark),
-                _buildSuggestionChip('Phim Hàn Quốc mới', isDark),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuggestionChip(String text, bool isDark) {
-    return GestureDetector(
-      onTap: () {
-        _searchController.text = text;
-        _onSearchChanged(text);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1A2332) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black,
-            fontSize: 13,
-          ),
-        ),
       ),
     );
   }
