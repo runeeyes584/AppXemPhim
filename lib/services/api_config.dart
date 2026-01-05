@@ -59,6 +59,22 @@ class ApiConfig {
   static String removeSavedMovieUrl(String movieId) =>
       '$baseUrl$savedMovieEndpoint/$movieId';
 
+  // WatchRoom endpoints
+  static const String watchRoomEndpoint = '/api/watch-rooms';
+  static String get getWatchRoomsUrl => '$baseUrl$watchRoomEndpoint';
+  static String get createWatchRoomUrl => '$baseUrl$watchRoomEndpoint';
+  static String getWatchRoomUrl(String code) =>
+      '$baseUrl$watchRoomEndpoint/$code';
+  static String joinWatchRoomUrl(String code) =>
+      '$baseUrl$watchRoomEndpoint/$code/join';
+  static String leaveWatchRoomUrl(String code) =>
+      '$baseUrl$watchRoomEndpoint/$code/leave';
+  static String closeWatchRoomUrl(String code) =>
+      '$baseUrl$watchRoomEndpoint/$code';
+
+  // Socket URL (same host, different protocol handling)
+  static String get socketUrl => baseUrl;
+
   // Request timeout
   static const Duration timeout = Duration(seconds: 30);
 

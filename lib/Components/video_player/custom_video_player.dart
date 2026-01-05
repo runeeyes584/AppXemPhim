@@ -7,26 +7,66 @@ class CustomVideoPlayer extends StatefulWidget {
   final bool autoPlay;
   final bool looping;
 
+  // Callbacks for sync (used in WatchRoom)
+  final void Function(Duration position)? onPlay;
+  final void Function(Duration position)? onPause;
+  final void Function(Duration position)? onSeek;
+
+  // Control restrictions for WatchRoom guests
+  final bool showControls;
+
+  // External control for syncing
+  final Stream<VideoCommand>? commandStream;
+
   const CustomVideoPlayer({
     super.key,
     required this.videoUrl,
     this.autoPlay = true,
     this.looping = false,
+    this.onPlay,
+    this.onPause,
+    this.onSeek,
+    this.showControls = true,
+    this.commandStream,
   });
 
   @override
-  State<CustomVideoPlayer> createState() => _CustomVideoPlayerState();
+  State<CustomVideoPlayer> createState() => CustomVideoPlayerState();
 }
 
-class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
+// Video command for external control
+enum VideoCommandType { play, pause, seek }
+
+class VideoCommand {
+  final VideoCommandType type;
+  final Duration? seekPosition;
+
+  VideoCommand.play() : type = VideoCommandType.play, seekPosition = null;
+  VideoCommand.pause() : type = VideoCommandType.pause, seekPosition = null;
+  VideoCommand.seek(Duration position)
+    : type = VideoCommandType.seek,
+      seekPosition = position;
+}
+
+class CustomVideoPlayerState extends State<CustomVideoPlayer> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
   bool _isError = false;
+
+  // Track state for callbacks
+  bool _wasPlaying = false;
+  Duration _lastPosition = Duration.zero;
+
+  // Flag to ignore callbacks when receiving external commands
+  bool _isExternalCommand = false;
 
   @override
   void initState() {
     super.initState();
     _initializePlayer();
+
+    // Listen to external commands
+    widget.commandStream?.listen(_handleExternalCommand);
   }
 
   @override
@@ -45,8 +85,77 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   void _disposeControllers() {
+    _videoPlayerController.removeListener(_onVideoStateChanged);
     _videoPlayerController.dispose();
     _chewieController?.dispose();
+  }
+
+  // Handle external commands (from socket sync)
+  void _handleExternalCommand(VideoCommand command) {
+    if (!mounted || _chewieController == null) return;
+
+    _isExternalCommand = true;
+
+    switch (command.type) {
+      case VideoCommandType.play:
+        _videoPlayerController.play();
+        break;
+      case VideoCommandType.pause:
+        _videoPlayerController.pause();
+        break;
+      case VideoCommandType.seek:
+        if (command.seekPosition != null) {
+          _videoPlayerController.seekTo(command.seekPosition!);
+        }
+        break;
+    }
+
+    // Reset flag after short delay
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _isExternalCommand = false;
+    });
+  }
+
+  // Public methods for external control
+  void play() {
+    _videoPlayerController.play();
+  }
+
+  void pause() {
+    _videoPlayerController.pause();
+  }
+
+  void seekTo(Duration position) {
+    _videoPlayerController.seekTo(position);
+  }
+
+  Duration get currentPosition => _videoPlayerController.value.position;
+  bool get isPlaying => _videoPlayerController.value.isPlaying;
+
+  void _onVideoStateChanged() {
+    if (!mounted || _isExternalCommand) return;
+
+    final isPlaying = _videoPlayerController.value.isPlaying;
+    final position = _videoPlayerController.value.position;
+
+    // Detect play/pause changes
+    if (isPlaying && !_wasPlaying) {
+      // Started playing
+      widget.onPlay?.call(position);
+    } else if (!isPlaying && _wasPlaying) {
+      // Paused
+      widget.onPause?.call(position);
+    }
+
+    // Detect seek (position changed significantly while paused or just after play)
+    final positionDiff = (position - _lastPosition).abs();
+    if (positionDiff > const Duration(seconds: 2) && _wasPlaying == isPlaying) {
+      // Likely a seek operation
+      widget.onSeek?.call(position);
+    }
+
+    _wasPlaying = isPlaying;
+    _lastPosition = position;
   }
 
   Future<void> _initializePlayer() async {
@@ -62,11 +171,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
       await _videoPlayerController.initialize();
 
+      // Add listener for sync callbacks
+      _videoPlayerController.addListener(_onVideoStateChanged);
+
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
         autoPlay: widget.autoPlay,
         looping: widget.looping,
         aspectRatio: _videoPlayerController.value.aspectRatio,
+        showControls: widget.showControls,
         errorBuilder: (context, errorMessage) {
           return Center(
             child: Text(

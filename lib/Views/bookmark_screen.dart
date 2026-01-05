@@ -7,6 +7,7 @@ import '../utils/app_snackbar.dart';
 import 'movie_detail_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
+import 'watch_rooms_screen.dart';
 
 class BookmarkScreen extends StatefulWidget {
   const BookmarkScreen({super.key});
@@ -79,6 +80,9 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
           destination = const SearchScreen();
           break;
         case 3:
+          destination = const WatchRoomsScreen();
+          break;
+        case 4:
           destination = const ProfileScreen();
           break;
         default:

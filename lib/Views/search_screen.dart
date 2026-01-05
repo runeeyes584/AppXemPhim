@@ -12,6 +12,7 @@ import '../utils/app_snackbar.dart';
 import 'bookmark_screen.dart';
 import 'movie_detail_screen.dart';
 import 'profile_screen.dart';
+import 'watch_rooms_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -243,6 +244,9 @@ class _SearchScreenState extends State<SearchScreen> {
           destination = const BookmarkScreen();
           break;
         case 3:
+          destination = const WatchRoomsScreen();
+          break;
+        case 4:
           destination = const ProfileScreen();
           break;
         default:

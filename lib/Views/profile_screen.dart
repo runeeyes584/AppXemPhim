@@ -12,6 +12,7 @@ import 'bookmark_screen.dart';
 import 'edit_profile_screen.dart';
 import 'login_screen.dart';
 import 'search_screen.dart';
+import 'watch_rooms_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -21,7 +22,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final int _currentIndex = 3;
+  final int _currentIndex = 4;
   final AuthService _authService = AuthService();
   User? _user;
   bool _isLoading = true;
@@ -55,6 +56,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           break;
         case 2:
           destination = const BookmarkScreen();
+          break;
+        case 3:
+          destination = const WatchRoomsScreen();
           break;
         default:
           return;

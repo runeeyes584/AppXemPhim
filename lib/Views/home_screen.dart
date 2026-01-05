@@ -14,6 +14,7 @@ import 'bookmark_screen.dart';
 import 'movie_detail_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
+import 'watch_rooms_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -106,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Widget destination;
     switch (index) {
       case 0:
-        return;
+        return; // Current screen
       case 1:
         destination = const SearchScreen();
         break;
@@ -114,6 +115,9 @@ class _HomeScreenState extends State<HomeScreen> {
         destination = const BookmarkScreen();
         break;
       case 3:
+        destination = const WatchRoomsScreen();
+        break;
+      case 4:
         destination = const ProfileScreen();
         break;
       default:

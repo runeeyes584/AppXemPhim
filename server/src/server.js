@@ -1,7 +1,9 @@
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
+import { createServer } from 'http';
 import mongoose from 'mongoose';
+import { Server } from 'socket.io';
 import AuthRoute from './routes/Auth.route.js';
 import BookmarkRoute from './routes/Bookmark.route.js';
 import CategoryRoute from './routes/Category.routes.js';
@@ -10,9 +12,24 @@ import CountryRoute from './routes/Country.routes.js';
 import MovieRoute from './routes/Movie.routes.js';
 import SavedMovieRoute from './routes/SavedMovie.route.js';
 import UserRoute from './routes/User.route.js';
+import WatchRoomRoute from './routes/WatchRoom.route.js';
+import { initializeSocket } from './services/socketService.js';
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+
+// Initialize Socket.IO
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_URL || '*',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// Initialize socket handlers
+initializeSocket(io);
 
 app.use(cors({
   origin: process.env.CLIENT_URL || '*',
@@ -46,6 +63,7 @@ app.use('/api/countries', CountryRoute);
 app.use('/api/movies', MovieRoute);
 app.use('/api/bookmarks', BookmarkRoute);
 app.use('/api/saved-movies', SavedMovieRoute);
+app.use('/api/watch-rooms', WatchRoomRoute);
 
 import https from 'https';
 app.get('/api/proxy/image', (req, res) => {
@@ -69,7 +87,8 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT;
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Socket.IO enabled`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
