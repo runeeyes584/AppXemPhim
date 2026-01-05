@@ -41,6 +41,7 @@ class ApiConfig {
       '$baseUrl$movieEndpoint/year/$year';
   static String getMovieDetailUrl(String slug) =>
       '$baseUrl$movieEndpoint/$slug';
+  static String get searchMoviesUrl => '$baseUrl$movieEndpoint';
 
   // Bookmark endpoints
   static const String bookmarkEndpoint = '/api/bookmarks';

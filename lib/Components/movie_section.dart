@@ -35,11 +35,7 @@ class MovieSection extends StatelessWidget {
               Row(
                 children: [
                   if (titleIcon != null) ...[
-                    Icon(
-                      titleIcon,
-                      color: const Color(0xFF5BA3F5),
-                      size: 24,
-                    ),
+                    Icon(titleIcon, color: const Color(0xFF5BA3F5), size: 24),
                     const SizedBox(width: 8),
                   ],
                   Text(
@@ -96,7 +92,10 @@ class MovieSection extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const MovieDetailScreen(),
+                                builder: (context) => MovieDetailScreen(
+                                  movieId: movie.id,
+                                  movie: movie,
+                                ),
                               ),
                             );
                           },

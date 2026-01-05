@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../Components/cast_list.dart';
 import '../Components/comment_section.dart';
 import '../Components/custom_button.dart';
+import '../Components/episode_server_list.dart';
+import '../Components/movie_genre_tags.dart';
 import '../models/movie_model.dart';
+import '../models/movie_detail_model.dart';
 import '../services/bookmark_service.dart';
+import '../services/movie_service.dart';
 
 class MovieDetailScreen extends StatefulWidget {
-  final String movieId;
-  final Movie? movie; // Optional: pass full movie data for bookmark
+  final String movieId; // This should be slug
+  final Movie? movie;
 
-  // Tạm thời để default value để không lỗi các màn hình khác
-  // Sau này bạn nên truyền ID thật từ API phim
-  const MovieDetailScreen({
-    super.key,
-    this.movieId = 'avengers-endgame-2019',
-    this.movie,
-  });
+  const MovieDetailScreen({super.key, required this.movieId, this.movie});
 
   @override
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
@@ -24,35 +23,65 @@ class MovieDetailScreen extends StatefulWidget {
 class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _isBookmarked = false;
   bool _isBookmarkLoading = false;
-  final BookmarkService _bookmarkService = BookmarkService();
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  final List<Map<String, String>> _cast = [
-    {
-      'name': 'Robert D. Jr',
-      'role': 'Iron Man',
-      'image': 'https://i.pravatar.cc/150?img=11',
-    },
-    {
-      'name': 'Chris Evans',
-      'role': 'Captain',
-      'image': 'https://i.pravatar.cc/150?img=12',
-    },
-    {
-      'name': 'Scarlett J.',
-      'role': 'Black Widow',
-      'image': 'https://i.pravatar.cc/150?img=13',
-    },
-    {
-      'name': 'Chris H.',
-      'role': 'Thor',
-      'image': 'https://i.pravatar.cc/150?img=14',
-    },
-  ];
+  final BookmarkService _bookmarkService = BookmarkService();
+  final MovieService _movieService = MovieService();
+
+  MovieDetail? _movieDetail;
+  List<CastMember> _cast = [];
+  List<ServerData> _servers = [];
+  int _currentServerIndex = 0;
+  int _currentEpisodeIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _loadMovieDetail();
     _checkBookmarkStatus();
+  }
+
+  Future<void> _loadMovieDetail() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    // Use slug from movieId or from movie object
+    final slug = widget.movie?.slug ?? widget.movieId;
+    final movieDetail = await _movieService.getMovieDetailFull(slug);
+
+    if (mounted) {
+      if (movieDetail != null) {
+        setState(() {
+          _movieDetail = movieDetail;
+          _isLoading = false;
+
+          // Convert actors to CastMember
+          _cast = movieDetail.actors
+              .map((name) => CastMember(name: name))
+              .toList();
+
+          // Convert episodes to ServerData
+          _servers = movieDetail.episodes
+              .map(
+                (server) => ServerData(
+                  name: server.serverName,
+                  episodes: server.episodes
+                      .map((ep) => EpisodeData(name: ep.name, slug: ep.slug))
+                      .toList(),
+                ),
+              )
+              .toList();
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Không thể tải thông tin phim';
+        });
+      }
+    }
   }
 
   Future<void> _checkBookmarkStatus() async {
@@ -132,6 +161,74 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Show loading indicator
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: isDark
+            ? const Color(0xFF0B0E13)
+            : const Color(0xFFF5F5F5),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back,
+              color: isDark ? Colors.white : Colors.black,
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Show error state
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: isDark
+            ? const Color(0xFF0B0E13)
+            : const Color(0xFFF5F5F5),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back,
+              color: isDark ? Colors.white : Colors.black,
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(_errorMessage!, style: TextStyle(color: Colors.grey[600])),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadMovieDetail,
+                child: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Use _movieDetail data or fallback to widget.movie
+    final posterUrl = _movieDetail?.posterUrl ?? widget.movie?.posterUrl ?? '';
+    final movieName = _movieDetail?.name ?? widget.movie?.name ?? 'Tên phim';
+    final originName =
+        _movieDetail?.originName ?? widget.movie?.originName ?? '';
+    final year = _movieDetail?.year ?? widget.movie?.year ?? 0;
+    final time = _movieDetail?.time ?? widget.movie?.time ?? '';
+    final quality = _movieDetail?.quality ?? widget.movie?.quality ?? 'HD';
+    final categories = _movieDetail?.category ?? widget.movie?.category ?? [];
+    final content =
+        _movieDetail?.content ?? widget.movie?.content ?? 'Chưa có mô tả.';
+
     return Scaffold(
       backgroundColor: isDark
           ? const Color(0xFF0B0E13)
@@ -204,8 +301,22 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 children: [
                   // Background Image
                   Image.network(
-                    'https://images.unsplash.com/photo-1635863138275-d9b33299680b?w=800',
+                    posterUrl.isNotEmpty
+                        ? posterUrl
+                        : 'https://via.placeholder.com/400x600',
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: const Color(0xFF1A2332),
+                        child: const Center(
+                          child: Icon(
+                            Icons.movie,
+                            size: 100,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
                   // Gradient Overlay
@@ -235,68 +346,44 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Genre Tags and Rating
-                  Row(
-                    children: [
-                      _buildGenreChip('HÀNH ĐỘNG', const Color(0xFF5BA3F5)),
-                      const SizedBox(width: 8),
-                      _buildGenreChip('VIỄN TƯỞNG', const Color(0xFF1A2332)),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFC107),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.star, color: Colors.black, size: 14),
-                            SizedBox(width: 4),
-                            Text(
-                              '9.8',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  MovieGenreTags(
+                    genres: categories.isNotEmpty ? categories : ['Phim'],
+                    rating: 8.5,
                   ),
 
                   const SizedBox(height: 16),
 
                   // Title
                   Text(
-                    'Avengers:',
+                    movieName,
                     style: TextStyle(
                       color: isDark ? Colors.white : Colors.black,
-                      fontSize: 32,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
 
-                  const Text(
-                    'Endgame',
-                    style: TextStyle(
-                      color: Color(0xFF5BA3F5),
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
+                  if (originName.isNotEmpty)
+                    Text(
+                      originName,
+                      style: const TextStyle(
+                        color: Color(0xFF5BA3F5),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
 
                   const SizedBox(height: 12),
 
                   // Year, Duration, Quality
                   Row(
                     children: [
-                      const Text(
-                        '2019',
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      Text(
+                        year > 0 ? year.toString() : '',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Container(
@@ -308,9 +395,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        '3g 2p',
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      Text(
+                        time,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Container(
@@ -342,7 +432,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '4K Ultra HD',
+                              quality,
                               style: TextStyle(
                                 color: isDark ? Colors.white : Colors.black,
                                 fontSize: 12,
@@ -422,102 +512,38 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
                   const SizedBox(height: 12),
 
-                  const Text(
-                    'Sau những sự kiện tàn khốc của Avengers: Infinity War (2018), vũ trụ đang ở hủy hoại. Với sự giúp đỡ của các đồng minh còn lại, Avengers tập hợp một lần nữa để đảo ngược hành động của Thanos và khôi phục cân bằng cho vũ trụ.',
-                    style: TextStyle(
+                  Text(
+                    content,
+                    style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 14,
                       height: 1.6,
                     ),
                   ),
+                  const SizedBox(height: 24),
+
+                  // Episode/Server List
+                  EpisodeServerList(
+                    servers: _servers,
+                    currentServerIndex: _currentServerIndex,
+                    currentEpisodeIndex: _currentEpisodeIndex,
+                    onEpisodeTap: (serverIndex, episodeIndex) {
+                      setState(() {
+                        _currentServerIndex = serverIndex;
+                        _currentEpisodeIndex = episodeIndex;
+                      });
+                      // TODO: Navigate to video player
+                    },
+                  ),
 
                   const SizedBox(height: 24),
 
-                  // Cast
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Diễn viên',
-                        style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text(
-                          'TẤT CẢ',
-                          style: TextStyle(
-                            color: Color(0xFF5BA3F5),
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  SizedBox(
-                    height: 160,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _cast.length,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 16),
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 80,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  image: DecorationImage(
-                                    image: NetworkImage(_cast[index]['image']!),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                width: 80,
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      _cast[index]['name']!.split(' ')[0],
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: isDark
-                                            ? Colors.white
-                                            : Colors.black,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      _cast[index]['role'] ?? 'Character',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 10,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                  // Cast List
+                  CastList(
+                    cast: _cast,
+                    onSeeAllTap: () {
+                      // TODO: Navigate to full cast list
+                    },
                   ),
 
                   const SizedBox(height: 24),
@@ -584,24 +610,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildGenreChip(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
       ),
     );
   }
