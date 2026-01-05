@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../models/comment_model.dart';
 import '../models/user_model.dart';
@@ -71,7 +72,10 @@ class _CommentSectionState extends State<CommentSection> {
     FocusScope.of(context).unfocus();
 
     try {
-      final newComment = await _commentService.addComment(widget.movieId, content);
+      final newComment = await _commentService.addComment(
+        widget.movieId,
+        content,
+      );
 
       if (!mounted) return;
       setState(() => _isSending = false);
@@ -82,11 +86,17 @@ class _CommentSectionState extends State<CommentSection> {
           _commentController.clear();
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã gửi bình luận!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Đã gửi bình luận!'),
+            backgroundColor: Colors.green,
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gửi thất bại.'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Gửi thất bại.'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
@@ -128,19 +138,25 @@ class _CommentSectionState extends State<CommentSection> {
 
               // Gọi Service
               final success = await _commentService.updateComment(
-                  widget.movieId, comment.id!, editController.text.trim());
+                widget.movieId,
+                comment.id!,
+                editController.text.trim(),
+              );
 
               if (success && mounted) {
                 setState(() {
                   // Cập nhật UI ngay lập tức
                   comment.content = editController.text.trim();
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã cập nhật!')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Đã cập nhật!')));
               } else if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Lỗi khi sửa!'), backgroundColor: Colors.red),
+                  const SnackBar(
+                    content: Text('Lỗi khi sửa!'),
+                    backgroundColor: Colors.red,
+                  ),
                 );
               }
             },
@@ -168,7 +184,10 @@ class _CommentSectionState extends State<CommentSection> {
               Navigator.pop(context); // Đóng dialog
 
               // Gọi Service
-              final success = await _commentService.deleteComment(widget.movieId, comment.id!);
+              final success = await _commentService.deleteComment(
+                widget.movieId,
+                comment.id!,
+              );
 
               if (success && mounted) {
                 setState(() {
@@ -179,7 +198,10 @@ class _CommentSectionState extends State<CommentSection> {
                 );
               } else if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Lỗi khi xóa!'), backgroundColor: Colors.red),
+                  const SnackBar(
+                    content: Text('Lỗi khi xóa!'),
+                    backgroundColor: Colors.red,
+                  ),
                 );
               }
             },
@@ -244,10 +266,7 @@ class _CommentSectionState extends State<CommentSection> {
               final comment = _comments[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: _buildComment(
-                  isDark: isDark,
-                  comment: comment,
-                ),
+                child: _buildComment(isDark: isDark, comment: comment),
               );
             },
           ),
@@ -263,20 +282,27 @@ class _CommentSectionState extends State<CommentSection> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundImage: _currentUser?.avatar != null
-                    ? NetworkImage(_currentUser!.avatar!)
-                    : null,
-                child: _currentUser?.avatar == null
-                    ? const Icon(Icons.person, size: 20)
-                    : null,
+                backgroundColor: isDark ? Colors.grey[700] : Colors.grey[300],
+                child:
+                    (_currentUser?.avatar != null &&
+                        _currentUser!.avatar!.isNotEmpty)
+                    ? ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: _currentUser!.avatar!,
+                          width: 36,
+                          height: 36,
+                          fit: BoxFit.cover,
+                          errorWidget: (context, url, error) =>
+                              const Icon(Icons.person, size: 20),
+                        ),
+                      )
+                    : const Icon(Icons.person, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: TextField(
                   controller: _commentController,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
                   decoration: InputDecoration(
                     hintText: _currentUser != null
                         ? 'Viết bình luận...'
@@ -299,10 +325,7 @@ class _CommentSectionState extends State<CommentSection> {
                 )
               else
                 IconButton(
-                  icon: const Icon(
-                    Icons.send,
-                    color: Color(0xFF5BA3F5),
-                  ),
+                  icon: const Icon(Icons.send, color: Color(0xFF5BA3F5)),
                   onPressed: _currentUser != null ? _addComment : null,
                 ),
             ],
@@ -313,13 +336,11 @@ class _CommentSectionState extends State<CommentSection> {
   }
 
   // --- WIDGET HIỂN THỊ 1 DÒNG BÌNH LUẬN (ĐÃ UPDATE) ---
-  Widget _buildComment({
-    required bool isDark,
-    required Comment comment,
-  }) {
+  Widget _buildComment({required bool isDark, required Comment comment}) {
     // 1. Kiểm tra quyền sở hữu
     // So sánh ID user đang đăng nhập và ID user của comment
-    final bool isOwner = _currentUser != null &&
+    final bool isOwner =
+        _currentUser != null &&
         comment.user != null &&
         _currentUser!.id == comment.user!.id;
 
@@ -338,12 +359,21 @@ class _CommentSectionState extends State<CommentSection> {
               // Avatar
               CircleAvatar(
                 radius: 20,
-                backgroundImage: comment.user?.avatar != null
-                    ? NetworkImage(comment.user!.avatar!)
-                    : null,
-                child: comment.user?.avatar == null
-                    ? const Icon(Icons.person)
-                    : null,
+                backgroundColor: isDark ? Colors.grey[700] : Colors.grey[300],
+                child:
+                    (comment.user?.avatar != null &&
+                        comment.user!.avatar!.isNotEmpty)
+                    ? ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: comment.user!.avatar!,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                          errorWidget: (context, url, error) =>
+                              const Icon(Icons.person),
+                        ),
+                      )
+                    : const Icon(Icons.person),
               ),
               const SizedBox(width: 12),
 
@@ -372,7 +402,11 @@ class _CommentSectionState extends State<CommentSection> {
                             width: 24,
                             child: PopupMenuButton<String>(
                               padding: EdgeInsets.zero,
-                              icon: Icon(Icons.more_vert, size: 18, color: isDark ? Colors.white54 : Colors.grey),
+                              icon: Icon(
+                                Icons.more_vert,
+                                size: 18,
+                                color: isDark ? Colors.white54 : Colors.grey,
+                              ),
                               onSelected: (value) {
                                 if (value == 'edit') _showEditDialog(comment);
                                 if (value == 'delete') _confirmDelete(comment);
@@ -380,11 +414,34 @@ class _CommentSectionState extends State<CommentSection> {
                               itemBuilder: (context) => [
                                 const PopupMenuItem(
                                   value: 'edit',
-                                  child: Row(children: [Icon(Icons.edit, size: 18, color: Colors.blue), SizedBox(width: 8), Text('Sửa')]),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.edit,
+                                        size: 18,
+                                        color: Colors.blue,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text('Sửa'),
+                                    ],
+                                  ),
                                 ),
                                 const PopupMenuItem(
                                   value: 'delete',
-                                  child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.red), SizedBox(width: 8), Text('Xóa', style: TextStyle(color: Colors.red))]),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.delete,
+                                        size: 18,
+                                        color: Colors.red,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Xóa',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -395,10 +452,7 @@ class _CommentSectionState extends State<CommentSection> {
                     const SizedBox(height: 2),
                     Text(
                       comment.displayTime,
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ],
                 ),

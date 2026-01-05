@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../Components/cast_list.dart';
 import '../Components/comment_section.dart';
-import '../Components/custom_button.dart';
 import '../Components/episode_server_list.dart';
 import '../Components/movie_genre_tags.dart';
 import '../Components/cached_image_widget.dart';
@@ -13,6 +13,10 @@ import '../services/movie_service.dart';
 import '../services/saved_movie_service.dart';
 import '../utils/app_snackbar.dart';
 import 'video_player_screen.dart';
+
+import '../Components/movie_detail/movie_info_header.dart';
+import '../Components/movie_detail/movie_action_buttons.dart';
+import '../Components/movie_detail/movie_synopsis.dart';
 
 class MovieDetailScreen extends StatefulWidget {
   final String movieId; // This should be slug
@@ -284,7 +288,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 ),
                 child: IconButton(
                   icon: const Icon(Icons.share, color: Colors.white),
-                  onPressed: () {},
+                  onPressed: () {
+                    final slug = widget.movie?.slug ?? widget.movieId;
+                    // Web Link: https://watchalong428.vercel.app/movie/<slug>
+                    final String deepLink =
+                        'https://watchalong428.vercel.app/movie/$slug';
+                    Share.share('Xem phim $movieName tại: $deepLink');
+                  },
                 ),
               ),
             ],
@@ -334,216 +344,48 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Title
-                  Text(
-                    movieName,
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  if (originName.isNotEmpty)
-                    Text(
-                      originName,
-                      style: const TextStyle(
-                        color: Color(0xFF5BA3F5),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-
-                  const SizedBox(height: 12),
-
-                  // Year, Duration, Quality
-                  Row(
-                    children: [
-                      Text(
-                        year > 0 ? year.toString() : '',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                          color: Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        time,
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                          color: Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF1A2332)
-                              : Colors.grey[200],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.hd,
-                              color: Color(0xFF5BA3F5),
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              quality,
-                              style: TextStyle(
-                                color: isDark ? Colors.white : Colors.black,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  // Movie Info Header
+                  MovieInfoHeader(
+                    movieName: movieName,
+                    originName: originName,
+                    year: year,
+                    time: time,
+                    quality: quality,
+                    isDark: isDark,
                   ),
 
                   const SizedBox(height: 24),
 
                   // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomButton(
-                          text: 'Xem ngay',
-                          onPressed: () {
-                            if (_servers.isNotEmpty &&
-                                _servers[0].episodes.isNotEmpty) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => VideoPlayerScreen(
-                                    movieDetail: _movieDetail!,
-                                    initialServerIndex: 0,
-                                    initialEpisodeIndex: 0,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              AppSnackBar.showError(
-                                context,
-                                'Chưa có tập phim nào',
-                              );
-                            }
-                          },
-                          backgroundColor: const Color(0xFF5BA3F5),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Save to list button
-                      GestureDetector(
-                        onTap: _isSaveLoading ? null : _toggleSaveMovie,
-                        child: Container(
-                          width: 80,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: _isSaved
-                                ? const Color(0xFF5BA3F5).withOpacity(0.2)
-                                : (isDark
-                                      ? const Color(0xFF1A2332)
-                                      : Colors.grey[200]),
-                            borderRadius: BorderRadius.circular(12),
-                            border: _isSaved
-                                ? Border.all(
-                                    color: const Color(0xFF5BA3F5),
-                                    width: 1.5,
-                                  )
-                                : null,
+                  MovieActionButtons(
+                    onWatchPressed: () {
+                      if (_servers.isNotEmpty &&
+                          _servers[0].episodes.isNotEmpty) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => VideoPlayerScreen(
+                              movieDetail: _movieDetail!,
+                              initialServerIndex: 0,
+                              initialEpisodeIndex: 0,
+                            ),
                           ),
-                          child: _isSaveLoading
-                              ? const Center(
-                                  child: SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Color(0xFF5BA3F5),
-                                    ),
-                                  ),
-                                )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      _isSaved ? Icons.check : Icons.add,
-                                      color: _isSaved
-                                          ? const Color(0xFF5BA3F5)
-                                          : (isDark
-                                                ? Colors.white
-                                                : Colors.black),
-                                      size: 24,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      _isSaved ? 'Đã lưu' : 'Lưu',
-                                      style: TextStyle(
-                                        color: _isSaved
-                                            ? const Color(0xFF5BA3F5)
-                                            : (isDark
-                                                  ? Colors.white
-                                                  : Colors.black),
-                                        fontSize: 10,
-                                        fontWeight: _isSaved
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ],
+                        );
+                      } else {
+                        AppSnackBar.showError(context, 'Chưa có tập phim nào');
+                      }
+                    },
+                    onSavePressed: _toggleSaveMovie,
+                    isSaved: _isSaved,
+                    isSaveLoading: _isSaveLoading,
+                    isDark: isDark,
                   ),
 
                   const SizedBox(height: 24),
 
                   // Synopsis
-                  Text(
-                    'Nội dung',
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  MovieSynopsis(content: content, isDark: isDark),
 
-                  const SizedBox(height: 12),
-
-                  Text(
-                    content,
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                      height: 1.6,
-                    ),
-                  ),
                   const SizedBox(height: 24),
 
                   // Episode/Server List

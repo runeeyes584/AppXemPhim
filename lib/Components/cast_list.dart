@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'cached_image_widget.dart';
 
 /// Model cho thông tin diễn viên
 class CastMember {
@@ -19,10 +18,10 @@ class CastList extends StatelessWidget {
 
   // Danh sách ảnh local trong assets
   static const List<String> _localAvatars = [
-    'Assets/img/avt1.png',
-    'Assets/img/avt2.png',
-    'Assets/img/avt3.png',
-    'Assets/img/avt4.png',
+    'assets/img/avt1.png',
+    'assets/img/avt2.png',
+    'assets/img/avt3.png',
+    'assets/img/avt4.png',
   ];
 
   const CastList({
@@ -32,10 +31,37 @@ class CastList extends StatelessWidget {
     this.primaryColor = const Color(0xFF5BA3F5),
   });
 
-  /// Lấy ảnh ngẫu nhiên từ thư mục assets
-  String _getRandomAvatar(int index) {
-    final random = Random(index); // Seed để cùng index ra cùng ảnh
+  /// Lấy ảnh ngẫu nhiên từ thư mục assets dựa theo tên
+  String _getRandomAvatar(String name) {
+    final random = Random(
+      name.hashCode,
+    ); // Seed theo tên để cố định ảnh cho mỗi người
     return _localAvatars[random.nextInt(_localAvatars.length)];
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length == 1) {
+      return parts[0].substring(0, 1).toUpperCase();
+    }
+    return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+  }
+
+  Color _getAvatarColor(String name) {
+    if (name.isEmpty) return Colors.grey;
+    final int hash = name.codeUnits.fold(0, (prev, element) => prev + element);
+    final List<Color> colors = [
+      Colors.blue,
+      Colors.red,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.amber,
+      Colors.indigo,
+    ];
+    return colors[hash % colors.length];
   }
 
   @override
@@ -86,18 +112,9 @@ class CastList extends StatelessWidget {
             itemCount: cast.length,
             itemBuilder: (context, index) {
               final member = cast[index];
-              final avatarPath = member.imageUrl ?? _getRandomAvatar(index);
-              final isLocalAsset = avatarPath.startsWith('Assets/');
-
               return Padding(
                 padding: const EdgeInsets.only(right: 16),
-                child: _buildCastCard(
-                  context,
-                  member,
-                  avatarPath,
-                  isLocalAsset,
-                  isDark,
-                ),
+                child: _buildCastCard(context, member, index, isDark),
               );
             },
           ),
@@ -109,10 +126,15 @@ class CastList extends StatelessWidget {
   Widget _buildCastCard(
     BuildContext context,
     CastMember member,
-    String avatarPath,
-    bool isLocalAsset,
+    int index,
     bool isDark,
   ) {
+    // Logic: Chỉ dùng Asset.
+    // Nếu Asset lỗi: Fallback về Initials.
+
+    // Lấy ảnh asset random theo tên để nhất quán
+    final String assetPath = _getRandomAvatar(member.name);
+
     return Column(
       children: [
         // Avatar image
@@ -128,23 +150,31 @@ class CastList extends StatelessWidget {
                 offset: const Offset(0, 4),
               ),
             ],
+            color: isDark ? const Color(0xFF1A2332) : Colors.grey[200],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: isLocalAsset
-                ? Image.asset(
-                    avatarPath,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildPlaceholder(isDark);
-                    },
-                  )
-                : CachedImageWidget(
-                    imageUrl: avatarPath,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
+            child: Image.asset(
+              assetPath,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // Nếu asset lỗi thì fallback về Initials
+                debugPrint('Error loading asset $assetPath: $error');
+                return Container(
+                  color: _getAvatarColor(member.name),
+                  child: Center(
+                    child: Text(
+                      _getInitials(member.name),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
+                );
+              },
+            ),
           ),
         ),
 
@@ -183,14 +213,5 @@ class CastList extends StatelessWidget {
     );
   }
 
-  Widget _buildPlaceholder(bool isDark) {
-    return Container(
-      color: isDark ? const Color(0xFF1A2332) : Colors.grey[300],
-      child: Icon(
-        Icons.person,
-        size: 40,
-        color: isDark ? Colors.grey[600] : Colors.grey[500],
-      ),
-    );
-  }
+  // _buildPlaceholder removed as it is replaced by logic in _buildCastCard
 }
