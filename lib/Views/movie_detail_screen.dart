@@ -5,6 +5,7 @@ import '../Components/comment_section.dart';
 import '../Components/custom_button.dart';
 import '../Components/episode_server_list.dart';
 import '../Components/movie_genre_tags.dart';
+import '../Components/cached_image_widget.dart';
 import '../models/movie_detail_model.dart';
 import '../models/movie_model.dart';
 import '../services/movie_service.dart';
@@ -279,23 +280,11 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 fit: StackFit.expand,
                 children: [
                   // Background Image
-                  Image.network(
-                    posterUrl.isNotEmpty
+                  CachedImageWidget(
+                    imageUrl: posterUrl.isNotEmpty
                         ? posterUrl
                         : 'https://via.placeholder.com/400x600',
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: const Color(0xFF1A2332),
-                        child: const Center(
-                          child: Icon(
-                            Icons.movie,
-                            size: 100,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      );
-                    },
                   ),
 
                   // Gradient Overlay
@@ -576,31 +565,13 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       itemBuilder: (context, index) {
                         return Padding(
                           padding: const EdgeInsets.only(right: 12),
-                          child: Container(
+                          child: CachedImageWidget(
+                            imageUrl:
+                                'https://picsum.photos/130/160?random=$index',
                             width: 130,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: const Color(0xFF1A2332),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  height: 160,
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(8),
-                                    ),
-                                    image: DecorationImage(
-                                      image: NetworkImage(
-                                        'https://picsum.photos/130/160?random=$index',
-                                      ),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            height: 160,
+                            borderRadius: BorderRadius.circular(8),
+                            fit: BoxFit.cover,
                           ),
                         );
                       },

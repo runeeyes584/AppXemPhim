@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'cached_image_widget.dart';
 
 class MovieSlide extends StatefulWidget {
   final List<Map<String, String>> movies;
@@ -93,191 +94,176 @@ class _MovieSlideState extends State<MovieSlide> {
                               ]
                             : null,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            // Background Image
-                            Image.network(
-                              movie['image']!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: const Color(0xFF1a1a2e),
-                                child: const Icon(
-                                  Icons.movie,
-                                  size: 60,
-                                  color: Colors.grey,
-                                ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Background Image
+                          CachedImageWidget(
+                            imageUrl: movie['image'] ?? '',
+                            fit: BoxFit.cover,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+
+                          // Gradient overlay
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.7),
+                                  Colors.black.withOpacity(0.95),
+                                ],
+                                stops: const [0.0, 0.4, 0.7, 1.0],
                               ),
                             ),
+                          ),
 
-                            // Gradient overlay
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.7),
-                                    Colors.black.withOpacity(0.95),
-                                  ],
-                                  stops: const [0.0, 0.4, 0.7, 1.0],
-                                ),
-                              ),
-                            ),
-
-                            // Top row: Rating & Bookmark
-                            Positioned(
-                              top: 14,
-                              left: 14,
-                              right: 14,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  // Rating badge
-                                  if (movie['rating'] != null)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 5,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.amber,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(
-                                            Icons.star,
-                                            size: 14,
+                          // Top row: Rating & Bookmark
+                          Positioned(
+                            top: 14,
+                            left: 14,
+                            right: 14,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Rating badge
+                                if (movie['rating'] != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
+                                          size: 14,
+                                          color: Colors.black87,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          movie['rating']!,
+                                          style: const TextStyle(
                                             color: Colors.black87,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            movie['rating']!,
-                                            style: const TextStyle(
-                                              color: Colors.black87,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                  else
-                                    const SizedBox(),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                else
+                                  const SizedBox(),
 
-                                  // Bookmark
-                                  GestureDetector(
-                                    onTap: () => widget.onBookmark?.call(index),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black38,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        (widget.bookmarkedStates?[index] ??
-                                                false)
-                                            ? Icons.bookmark
-                                            : Icons.bookmark_border,
-                                        color:
-                                            (widget.bookmarkedStates?[index] ??
-                                                false)
-                                            ? Colors.amber
-                                            : Colors.white,
-                                        size: 22,
-                                      ),
+                                // Bookmark
+                                GestureDetector(
+                                  onTap: () => widget.onBookmark?.call(index),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black38,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      (widget.bookmarkedStates?[index] ?? false)
+                                          ? Icons.bookmark
+                                          : Icons.bookmark_border,
+                                      color:
+                                          (widget.bookmarkedStates?[index] ??
+                                              false)
+                                          ? Colors.amber
+                                          : Colors.white,
+                                      size: 22,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
+                          ),
 
-                            // Bottom content
-                            Positioned(
-                              bottom: 16,
-                              left: 16,
-                              right: 16,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Title
-                                  Text(
-                                    movie['title'] ?? '',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      height: 1.2,
+                          // Bottom content
+                          Positioned(
+                            bottom: 16,
+                            left: 16,
+                            right: 16,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Title
+                                Text(
+                                  movie['title'] ?? '',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.2,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Tags row
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  children: [
+                                    if (movie['year'] != null)
+                                      _buildTag(movie['year']!),
+                                    if (movie['genre'] != null)
+                                      _buildTag(movie['genre']!),
+                                    if (movie['quality'] != null)
+                                      _buildTag(
+                                        movie['quality']!,
+                                        highlight: true,
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+
+                                // Play button
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () =>
+                                        widget.onMovieTap?.call(index),
+                                    icon: const Icon(
+                                      Icons.play_arrow_rounded,
+                                      size: 22,
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 8),
-
-                                  // Tags row
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 6,
-                                    children: [
-                                      if (movie['year'] != null)
-                                        _buildTag(movie['year']!),
-                                      if (movie['genre'] != null)
-                                        _buildTag(movie['genre']!),
-                                      if (movie['quality'] != null)
-                                        _buildTag(
-                                          movie['quality']!,
-                                          highlight: true,
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 14),
-
-                                  // Play button
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () =>
-                                          widget.onMovieTap?.call(index),
-                                      icon: const Icon(
-                                        Icons.play_arrow_rounded,
-                                        size: 22,
-                                      ),
-                                      label: const Text(
-                                        'Xem ngay',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF6C63FF,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        elevation: 0,
+                                    label: const Text(
+                                      'Xem ngay',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF6C63FF),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

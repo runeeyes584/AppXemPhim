@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'cached_image_widget.dart';
 
 class MovieCard extends StatelessWidget {
   final String title;
@@ -31,26 +32,14 @@ class MovieCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            ClipRRect(
+            CachedImageWidget(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
               borderRadius: BorderRadius.circular(16),
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[800],
-                    child: const Icon(
-                      Icons.movie,
-                      size: 50,
-                      color: Colors.grey,
-                    ),
-                  );
-                },
-              ),
             ),
-            
+
             Positioned(
               top: 8,
               right: 8,
@@ -59,7 +48,9 @@ class MovieCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isBookmarked ? const Color(0xFF5BA3F5) : Colors.black54,
+                    color: isBookmarked
+                        ? const Color(0xFF5BA3F5)
+                        : Colors.black54,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -70,7 +61,7 @@ class MovieCard extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             Positioned(
               bottom: 0,
               left: 0,
@@ -85,10 +76,7 @@ class MovieCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.8),
-                    ],
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
                   ),
                 ),
                 child: Column(
@@ -109,10 +97,7 @@ class MovieCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         [year, genre].where((e) => e != null).join(' • '),
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
                       ),
                     ],
                   ],

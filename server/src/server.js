@@ -47,6 +47,20 @@ app.use('/api/movies', MovieRoute);
 app.use('/api/bookmarks', BookmarkRoute);
 app.use('/api/saved-movies', SavedMovieRoute);
 
+import https from 'https';
+app.get('/api/proxy/image', (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).send('URL is required');
+
+  https.get(url, (response) => {
+    res.set('Content-Type', response.headers['content-type']);
+    response.pipe(res);
+  }).on('error', (err) => {
+    console.error('Proxy error:', err);
+    res.status(500).send('Error fetching image');
+  });
+});
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,

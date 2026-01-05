@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'cached_image_widget.dart';
 
 /// Model cho thông tin diễn viên
 class CastMember {
@@ -138,12 +139,11 @@ class CastList extends StatelessWidget {
                       return _buildPlaceholder(isDark);
                     },
                   )
-                : Image.network(
-                    avatarPath,
+                : CachedImageWidget(
+                    imageUrl: avatarPath,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildPlaceholder(isDark);
-                    },
+                    width: double.infinity,
+                    height: double.infinity,
                   ),
           ),
         ),
