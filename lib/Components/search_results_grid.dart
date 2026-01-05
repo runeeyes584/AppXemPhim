@@ -6,6 +6,8 @@ class SearchResultsGrid extends StatelessWidget {
   final List<Movie> movies;
   final bool isLoading;
   final Function(Movie) onMovieTap;
+  final Function(Movie)? onBookmark;
+  final bool Function(Movie)? isBookmarked;
   final String emptyMessage;
 
   const SearchResultsGrid({
@@ -13,6 +15,8 @@ class SearchResultsGrid extends StatelessWidget {
     required this.movies,
     required this.isLoading,
     required this.onMovieTap,
+    this.onBookmark,
+    this.isBookmarked,
     this.emptyMessage = 'Không tìm thấy phim nào',
   });
 
@@ -49,12 +53,15 @@ class SearchResultsGrid extends StatelessWidget {
       itemCount: movies.length,
       itemBuilder: (context, index) {
         final movie = movies[index];
+        final isSaved = isBookmarked?.call(movie) ?? false;
+
         return MovieCard(
           title: movie.name,
           imageUrl: movie.posterUrl,
           year: movie.year.toString(),
-          genre:
-              'Phim', // Movie model currently doesn't have genre suitable for card, or hard to parse
+          genre: 'Phim',
+          isBookmarked: isSaved,
+          onBookmark: onBookmark != null ? () => onBookmark!(movie) : null,
           onTap: () => onMovieTap(movie),
         );
       },

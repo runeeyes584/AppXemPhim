@@ -7,6 +7,8 @@ import '../Components/category_filter_list.dart';
 import '../Components/search_results_grid.dart';
 import '../models/movie_model.dart';
 import '../services/movie_service.dart';
+import '../services/saved_movie_notifier.dart';
+import '../utils/app_snackbar.dart';
 import 'bookmark_screen.dart';
 import 'movie_detail_screen.dart';
 import 'profile_screen.dart';
@@ -40,10 +42,26 @@ class _SearchScreenState extends State<SearchScreen> {
   String _selectedCategory = 'Tất cả';
 
   @override
+  void initState() {
+    super.initState();
+    savedMovieNotifier.addListener(_onSavedMoviesChanged);
+    if (!savedMovieNotifier.isLoaded) {
+      savedMovieNotifier.loadSavedMovies();
+    }
+  }
+
+  @override
   void dispose() {
+    savedMovieNotifier.removeListener(_onSavedMoviesChanged);
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onSavedMoviesChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _onSearchChanged(String query) {
@@ -77,6 +95,27 @@ class _SearchScreenState extends State<SearchScreen> {
         _searchResults = results;
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _toggleSaveMovie(Movie movie) async {
+    final slug = movie.slug;
+    final isCurrentlySaved = savedMovieNotifier.isMovieSaved(slug);
+
+    if (isCurrentlySaved) {
+      final success = await savedMovieNotifier.removeSavedMovie(slug);
+      if (success && mounted) {
+        AppSnackBar.showSuccess(context, 'Đã xóa khỏi danh sách lưu');
+      } else if (mounted) {
+        AppSnackBar.showError(context, 'Không thể xóa phim');
+      }
+    } else {
+      final success = await savedMovieNotifier.saveMovie(slug);
+      if (success && mounted) {
+        AppSnackBar.showSuccess(context, 'Đã lưu phim thành công');
+      } else if (mounted) {
+        AppSnackBar.showError(context, 'Không thể lưu phim');
+      }
     }
   }
 
@@ -161,6 +200,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   : SearchResultsGrid(
                       movies: _searchResults,
                       isLoading: _isLoading,
+                      isBookmarked: (movie) =>
+                          savedMovieNotifier.isMovieSaved(movie.slug),
+                      onBookmark: _toggleSaveMovie,
                       onMovieTap: (movie) {
                         Navigator.push(
                           context,
