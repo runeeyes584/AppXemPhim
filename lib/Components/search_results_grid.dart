@@ -1,0 +1,63 @@
+import 'package:flutter/material.dart';
+import '../models/movie_model.dart';
+import 'movie_card.dart';
+
+class SearchResultsGrid extends StatelessWidget {
+  final List<Movie> movies;
+  final bool isLoading;
+  final Function(Movie) onMovieTap;
+  final String emptyMessage;
+
+  const SearchResultsGrid({
+    super.key,
+    required this.movies,
+    required this.isLoading,
+    required this.onMovieTap,
+    this.emptyMessage = 'Không tìm thấy phim nào',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (movies.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              emptyMessage,
+              style: TextStyle(color: Colors.grey[600], fontSize: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.65,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: movies.length,
+      itemBuilder: (context, index) {
+        final movie = movies[index];
+        return MovieCard(
+          title: movie.name,
+          imageUrl: movie.posterUrl,
+          year: movie.year.toString(),
+          genre:
+              'Phim', // Movie model currently doesn't have genre suitable for card, or hard to parse
+          onTap: () => onMovieTap(movie),
+        );
+      },
+    );
+  }
+}
