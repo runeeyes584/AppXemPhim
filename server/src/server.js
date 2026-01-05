@@ -3,12 +3,13 @@ import dotenv from 'dotenv';
 import express from 'express';
 import mongoose from 'mongoose';
 import AuthRoute from './routes/Auth.route.js';
-import UserRoute from './routes/User.route.js';
-import CommentRoute from './routes/Comment.route.js';
+import BookmarkRoute from './routes/Bookmark.route.js';
 import CategoryRoute from './routes/Category.routes.js';
+import CommentRoute from './routes/Comment.route.js';
 import CountryRoute from './routes/Country.routes.js';
 import MovieRoute from './routes/Movie.routes.js';
-import BookmarkRoute from './routes/Bookmark.route.js';
+import SavedMovieRoute from './routes/SavedMovie.route.js';
+import UserRoute from './routes/User.route.js';
 dotenv.config();
 
 const app = express();
@@ -44,6 +45,7 @@ app.use('/api/categories', CategoryRoute);
 app.use('/api/countries', CountryRoute);
 app.use('/api/movies', MovieRoute);
 app.use('/api/bookmarks', BookmarkRoute);
+app.use('/api/saved-movies', SavedMovieRoute);
 
 app.use((req, res) => {
   res.status(404).json({

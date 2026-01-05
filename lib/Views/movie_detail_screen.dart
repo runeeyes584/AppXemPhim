@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../Components/comment_section.dart';
 import '../Components/custom_button.dart';
 import '../models/movie_model.dart';
-import '../services/bookmark_service.dart';
+import '../services/saved_movie_service.dart';
+import '../utils/app_snackbar.dart';
 
 class MovieDetailScreen extends StatefulWidget {
   final String movieId;
@@ -22,9 +23,9 @@ class MovieDetailScreen extends StatefulWidget {
 }
 
 class _MovieDetailScreenState extends State<MovieDetailScreen> {
-  bool _isBookmarked = false;
-  bool _isBookmarkLoading = false;
-  final BookmarkService _bookmarkService = BookmarkService();
+  bool _isSaved = false;
+  bool _isSaveLoading = false;
+  final SavedMovieService _savedMovieService = SavedMovieService();
 
   final List<Map<String, String>> _cast = [
     {
@@ -52,78 +53,56 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _checkBookmarkStatus();
+    _checkSaveStatus();
   }
 
-  Future<void> _checkBookmarkStatus() async {
-    final isBookmarked = await _bookmarkService.checkBookmark(widget.movieId);
+  Future<void> _checkSaveStatus() async {
+    final isSaved = await _savedMovieService.isMovieSaved(widget.movieId);
     if (mounted) {
-      setState(() => _isBookmarked = isBookmarked);
+      setState(() => _isSaved = isSaved);
     }
   }
 
-  Future<void> _toggleBookmark() async {
-    if (_isBookmarkLoading) return;
+  Future<void> _toggleSaveMovie() async {
+    if (_isSaveLoading) return;
 
-    setState(() => _isBookmarkLoading = true);
+    setState(() => _isSaveLoading = true);
 
     try {
-      if (_isBookmarked) {
-        // Remove bookmark
-        final response = await _bookmarkService.removeBookmark(widget.movieId);
+      if (_isSaved) {
+        // Remove from saved list
+        final response = await _savedMovieService.removeSavedMovie(
+          widget.movieId,
+        );
         if (response.success && mounted) {
-          setState(() => _isBookmarked = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đã xóa khỏi danh sách lưu')),
+          setState(() => _isSaved = false);
+          AppSnackBar.showSuccess(context, 'Đã xóa khỏi danh sách lưu');
+        } else if (mounted) {
+          AppSnackBar.showError(
+            context,
+            response.message ?? 'Không thể xóa phim',
           );
         }
       } else {
-        // Add bookmark - create Movie from widget data or use passed Movie
-        final movie =
-            widget.movie ??
-            Movie(
-              id: widget.movieId,
-              name: 'Avengers: Endgame',
-              slug: widget.movieId,
-              originName: 'Avengers: Endgame',
-              content: '',
-              type: 'single',
-              status: 'completed',
-              year: 2019,
-              posterUrl:
-                  'https://images.unsplash.com/photo-1635863138275-d9b33299680b?w=800',
-              thumbUrl: '',
-              webpPoster: '',
-              webpThumb: '',
-              time: '3g 2p',
-              episodeCurrent: 'Full',
-              quality: 'HD',
-              lang: 'Vietsub',
-              category: ['Hành động', 'Viễn tưởng'],
-              country: ['Mỹ'],
-            );
-
-        final response = await _bookmarkService.addBookmark(movie);
+        // Save movie using movieId (slug)
+        final response = await _savedMovieService.saveMovie(widget.movieId);
         if (response.success && mounted) {
-          setState(() => _isBookmarked = true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đã lưu phim thành công')),
-          );
+          setState(() => _isSaved = true);
+          AppSnackBar.showSuccess(context, 'Đã lưu phim thành công');
         } else if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(response.message ?? 'Không thể lưu phim')),
+          AppSnackBar.showError(
+            context,
+            response.message ?? 'Không thể lưu phim',
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Có lỗi xảy ra')));
+        AppSnackBar.showError(context, 'Có lỗi xảy ra');
       }
     } finally {
       if (mounted) {
-        setState(() => _isBookmarkLoading = false);
+        setState(() => _isSaveLoading = false);
       }
     }
   }
@@ -167,7 +146,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   color: Colors.black.withOpacity(0.5),
                   shape: BoxShape.circle,
                 ),
-                child: _isBookmarkLoading
+                child: _isSaveLoading
                     ? const SizedBox(
                         width: 24,
                         height: 24,
@@ -178,12 +157,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       )
                     : IconButton(
                         icon: Icon(
-                          _isBookmarked
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          color: _isBookmarked ? Colors.red : Colors.white,
+                          _isSaved ? Icons.bookmark : Icons.bookmark_border,
+                          color: _isSaved
+                              ? const Color(0xFF5BA3F5)
+                              : Colors.white,
                         ),
-                        onPressed: _toggleBookmark,
+                        onPressed: _toggleSaveMovie,
                       ),
               ),
               Container(

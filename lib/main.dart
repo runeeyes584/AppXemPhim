@@ -11,6 +11,9 @@ import 'Views/search_screen.dart';
 import 'theme_provider.dart';
 import 'utils.dart';
 
+// Global RouteObserver for tracking route changes
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 void main() {
   runApp(
     ChangeNotifierProvider(
@@ -29,6 +32,7 @@ class MyApp extends StatelessWidget {
       builder: (context, themeProvider, child) {
         return MaterialApp(
           navigatorKey: Utils.navigatorKey,
+          navigatorObservers: [routeObserver],
           title: 'App Xem Phim',
           debugShowCheckedModeBanner: false,
           themeMode: themeProvider.themeMode,

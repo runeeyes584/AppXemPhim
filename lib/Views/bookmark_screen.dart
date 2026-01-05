@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../Components/bookmark_card.dart';
 import '../Components/bottom_navbar.dart';
-import '../services/bookmark_service.dart';
+import '../services/saved_movie_service.dart';
+import '../utils/app_snackbar.dart';
 import 'movie_detail_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
@@ -20,28 +21,28 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  final BookmarkService _bookmarkService = BookmarkService();
-  List<BookmarkItem> _bookmarkedMovies = [];
+  final SavedMovieService _savedMovieService = SavedMovieService();
+  List<SavedMovieItem> _savedMovies = [];
 
   @override
   void initState() {
     super.initState();
-    _loadBookmarks();
+    _loadSavedMovies();
   }
 
-  Future<void> _loadBookmarks() async {
+  Future<void> _loadSavedMovies() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    final response = await _bookmarkService.getBookmarks();
+    final response = await _savedMovieService.getSavedMovies();
 
     if (mounted) {
       setState(() {
         _isLoading = false;
         if (response.success) {
-          _bookmarkedMovies = response.bookmarks ?? [];
+          _savedMovies = response.savedMovies ?? [];
         } else {
           _errorMessage = response.message ?? 'Không thể tải danh sách phim';
         }
@@ -49,22 +50,20 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
     }
   }
 
-  Future<void> _deleteBookmark(int index) async {
-    final bookmark = _bookmarkedMovies[index];
+  Future<void> _deleteSavedMovie(int index) async {
+    final savedMovie = _savedMovies[index];
 
-    final response = await _bookmarkService.removeBookmark(bookmark.movieId);
+    final response = await _savedMovieService.removeSavedMovie(
+      savedMovie.movieSlug,
+    );
 
     if (response.success && mounted) {
       setState(() {
-        _bookmarkedMovies.removeAt(index);
+        _savedMovies.removeAt(index);
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã xóa khỏi danh sách lưu')),
-      );
+      AppSnackBar.showSuccess(context, 'Đã xóa khỏi danh sách lưu');
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message ?? 'Không thể xóa phim')),
-      );
+      AppSnackBar.showError(context, response.message ?? 'Không thể xóa phim');
     }
   }
 
@@ -127,7 +126,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
               Icons.refresh,
               color: isDark ? Colors.white : Colors.black,
             ),
-            onPressed: _loadBookmarks,
+            onPressed: _loadSavedMovies,
           ),
         ],
       ),
@@ -158,7 +157,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _loadBookmarks,
+              onPressed: _loadSavedMovies,
               child: const Text('Thử lại'),
             ),
           ],
@@ -166,7 +165,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
       );
     }
 
-    if (_bookmarkedMovies.isEmpty) {
+    if (_savedMovies.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -199,7 +198,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${_bookmarkedMovies.length} mục',
+                '${_savedMovies.length} mục',
                 style: TextStyle(
                   color: isDark ? Colors.grey : Colors.black54,
                   fontSize: 14,
@@ -231,7 +230,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
           ),
         ),
 
-        // Bookmarked Movies Grid/List
+        // Saved Movies Grid/List
         Expanded(child: _isGridView ? _buildGridView() : _buildListView()),
       ],
     );
@@ -246,23 +245,26 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 16,
       ),
-      itemCount: _bookmarkedMovies.length,
+      itemCount: _savedMovies.length,
       itemBuilder: (context, index) {
-        final bookmark = _bookmarkedMovies[index];
+        final savedMovie = _savedMovies[index];
+        final movie = savedMovie.movie;
         return BookmarkCard(
-          title: bookmark.movieName,
-          year: bookmark.year.toString(),
-          genre: bookmark.category.isNotEmpty ? bookmark.category.first : '',
-          imageUrl: bookmark.posterUrl,
-          onDelete: () => _deleteBookmark(index),
+          title: movie?.name ?? 'Unknown',
+          year: movie?.year.toString() ?? '',
+          genre: movie?.category.isNotEmpty == true
+              ? movie!.category.first
+              : '',
+          imageUrl: movie?.posterUrl ?? '',
+          onDelete: () => _deleteSavedMovie(index),
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) =>
-                    MovieDetailScreen(movieId: bookmark.movieId),
+                    MovieDetailScreen(movieId: savedMovie.movieSlug),
               ),
-            ).then((_) => _loadBookmarks()); // Refresh after returning
+            ).then((_) => _loadSavedMovies()); // Refresh after returning
           },
         );
       },
@@ -272,29 +274,30 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
   Widget _buildListView() {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _bookmarkedMovies.length,
+      itemCount: _savedMovies.length,
       itemBuilder: (context, index) {
-        final bookmark = _bookmarkedMovies[index];
+        final savedMovie = _savedMovies[index];
+        final movie = savedMovie.movie;
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: SizedBox(
             height: 140,
             child: BookmarkCard(
-              title: bookmark.movieName,
-              year: bookmark.year.toString(),
-              genre: bookmark.category.isNotEmpty
-                  ? bookmark.category.first
+              title: movie?.name ?? 'Unknown',
+              year: movie?.year.toString() ?? '',
+              genre: movie?.category.isNotEmpty == true
+                  ? movie!.category.first
                   : '',
-              imageUrl: bookmark.posterUrl,
-              onDelete: () => _deleteBookmark(index),
+              imageUrl: movie?.posterUrl ?? '',
+              onDelete: () => _deleteSavedMovie(index),
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        MovieDetailScreen(movieId: bookmark.movieId),
+                        MovieDetailScreen(movieId: savedMovie.movieSlug),
                   ),
-                ).then((_) => _loadBookmarks()); // Refresh after returning
+                ).then((_) => _loadSavedMovies()); // Refresh after returning
               },
             ),
           ),

@@ -4,11 +4,12 @@ import '../Components/bottom_navbar.dart';
 import '../Components/home_app_bar.dart';
 import '../Components/movie_section.dart';
 import '../Components/movie_slide.dart';
-import '../models/user_model.dart';
 import '../models/movie_model.dart';
+import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/movie_service.dart';
-import '../services/bookmark_service.dart';
+import '../services/saved_movie_notifier.dart';
+import '../utils/app_snackbar.dart';
 import 'bookmark_screen.dart';
 import 'movie_detail_screen.dart';
 import 'profile_screen.dart';
@@ -25,19 +26,31 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final AuthService _authService = AuthService();
   final MovieService _movieService = MovieService();
-  final BookmarkService _bookmarkService = BookmarkService();
   User? _user;
 
   List<Movie> _featuredMovies = [];
   List<Movie> _newMovies = [];
   List<Movie> _recommendedMovies = [];
-  List<bool> _featuredBookmarkStates = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    // Listen to saved movie changes
+    savedMovieNotifier.addListener(_onSavedMoviesChanged);
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    savedMovieNotifier.removeListener(_onSavedMoviesChanged);
+    super.dispose();
+  }
+
+  void _onSavedMoviesChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _loadData() async {
@@ -52,57 +65,37 @@ class _HomeScreenState extends State<HomeScreen> {
       limit: 10,
     );
 
+    // Load saved movies state
+    await savedMovieNotifier.loadSavedMovies();
+
     if (mounted) {
       setState(() {
         _user = user;
         _featuredMovies = featured;
         _newMovies = newRelease;
         _recommendedMovies = recommended;
-        _featuredBookmarkStates = List.filled(featured.length, false);
         _isLoading = false;
       });
-
-      // Check bookmark states after movies are loaded
-      _checkBookmarkStates();
     }
   }
 
-  Future<void> _checkBookmarkStates() async {
-    for (int i = 0; i < _featuredMovies.length; i++) {
-      final isBookmarked = await _bookmarkService.checkBookmark(
-        _featuredMovies[i].id,
-      );
-      if (mounted && i < _featuredBookmarkStates.length) {
-        setState(() => _featuredBookmarkStates[i] = isBookmarked);
-      }
-    }
-  }
-
-  Future<void> _toggleBookmark(int index) async {
+  Future<void> _toggleSaveMovie(int index) async {
     if (index >= _featuredMovies.length) return;
 
     final movie = _featuredMovies[index];
-    final isCurrentlyBookmarked = _featuredBookmarkStates[index];
+    final isCurrentlySaved = savedMovieNotifier.isMovieSaved(movie.slug);
 
-    if (isCurrentlyBookmarked) {
-      final response = await _bookmarkService.removeBookmark(movie.id);
-      if (response.success && mounted) {
-        setState(() => _featuredBookmarkStates[index] = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã xóa khỏi danh sách lưu')),
-        );
+    if (isCurrentlySaved) {
+      final success = await savedMovieNotifier.removeSavedMovie(movie.slug);
+      if (success && mounted) {
+        AppSnackBar.showSuccess(context, 'Đã xóa khỏi danh sách lưu');
       }
     } else {
-      final response = await _bookmarkService.addBookmark(movie);
-      if (response.success && mounted) {
-        setState(() => _featuredBookmarkStates[index] = true);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Đã lưu phim thành công')));
+      final success = await savedMovieNotifier.saveMovie(movie.slug);
+      if (success && mounted) {
+        AppSnackBar.showSuccess(context, 'Đã lưu phim thành công');
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response.message ?? 'Không thể lưu phim')),
-        );
+        AppSnackBar.showError(context, 'Không thể lưu phim');
       }
     }
   }
@@ -137,6 +130,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Get saved states for featured movies from notifier
+    final featuredSavedStates = _featuredMovies
+        .map((m) => savedMovieNotifier.isMovieSaved(m.slug))
+        .toList();
+
     return Scaffold(
       backgroundColor: isDark
           ? const Color(0xFF0B0E13)
@@ -159,24 +157,24 @@ class _HomeScreenState extends State<HomeScreen> {
                               (m) => {
                                 'title': m.name,
                                 'year': m.year.toString(),
-                                'genre': m.type, // or category name
+                                'genre': m.type,
                                 'image': m.posterUrl,
                               },
                             )
                             .toList(),
-                        bookmarkedStates: _featuredBookmarkStates,
-                        onBookmark: _toggleBookmark,
+                        bookmarkedStates: featuredSavedStates,
+                        onBookmark: _toggleSaveMovie,
                         onMovieTap: (index) {
                           final movie = _featuredMovies[index];
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => MovieDetailScreen(
-                                movieId: movie.id,
+                                movieId: movie.slug,
                                 movie: movie,
                               ),
                             ),
-                          ).then((_) => _checkBookmarkStates());
+                          );
                         },
                       ),
               ),

@@ -7,6 +7,7 @@ import '../Components/bottom_navbar.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../theme_provider.dart';
+import '../utils/app_snackbar.dart';
 import 'bookmark_screen.dart';
 import 'edit_profile_screen.dart';
 import 'login_screen.dart';
@@ -68,13 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _logout() async {
     await _authService.logout();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã đăng xuất thành công!'),
-          backgroundColor: Colors.blue,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      AppSnackBar.showSuccess(context, 'Đã đăng xuất thành công!');
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
